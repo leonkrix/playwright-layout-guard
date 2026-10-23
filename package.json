@@ -72,6 +72,7 @@
     "survey": "node scripts/survey.mjs",
     "changeset": "changeset",
     "version-packages": "changeset version",
+    "release:tag": "node scripts/tag-release.mjs",
     "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test:unit && pnpm build && pnpm lint:package && pnpm test"
   },
   "devDependencies": {

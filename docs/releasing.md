@@ -24,13 +24,14 @@ Choose `patch` (fix), `minor` (new option or rule) or `major` (breaking), and wr
 
    Open a pull request, let `CI passed` go green, squash-merge it.
 
-2. Tag the merge commit and push the tag:
+2. Tag the squash commit on `main` and push the tag:
 
    ```bash
    git switch main && git pull
-   git tag v0.2.0      # the version in package.json, with a v in front
-   git push origin v0.2.0
+   pnpm release:tag    # tags v<version of package.json> and pushes it
    ```
+
+   The script refuses to run on another branch, with local changes, or when `main` is behind `origin/main`. The tag has to be on `main`: a squash merge makes a **new** commit, so a tag made on the branch of the release pull request points to a commit that `main` never gets, and the workflow refuses it ("The commit of v… is not on main"). If that happens: `git push origin :refs/tags/v0.2.0 && git tag -d v0.2.0`, then repeat the step above.
 
 3. The workflow `Release` checks that the tag is on `main`, that it matches `package.json` and that the CI of this very commit passed. It repeats the quick checks (lint, types, unit tests, build, package lint; the browser tests are not repeated, the CI did them), **stages** the version on npm with provenance and creates the GitHub release with the notes of that version from `CHANGELOG.md`.
 
