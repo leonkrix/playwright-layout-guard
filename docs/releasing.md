@@ -32,9 +32,11 @@ Choose `patch` (fix), `minor` (new option or rule) or `major` (breaking), and wr
    git push origin v0.2.0
    ```
 
-3. The workflow `Release` does the rest: it refuses a tag that does not match `package.json`, runs every check in all three browsers, publishes to npm with provenance, and creates the GitHub release with the notes of that version from `CHANGELOG.md`.
+3. The workflow `Release` checks that the tag is on `main`, that it matches `package.json` and that the CI of this very commit passed. It repeats the quick checks (lint, types, unit tests, build, package lint; the browser tests are not repeated, the CI did them), **stages** the version on npm with provenance and creates the GitHub release with the notes of that version from `CHANGELOG.md`.
 
-A version with a hyphen (`0.3.0-beta.1`) is published as a pre-release on GitHub. For npm, publish those with a tag by hand, so `latest` does not move: `npm publish --tag next`.
+4. **Approve the version on npm.** The trusted publisher of the package only allows staging ("npm stage publish"), so a version is not public until a maintainer approves it with two-factor authentication: on npmjs.com open the package, the **Staged Packages** tab, check the version and click **Approve**. From the command line: `npm stage list`, then `npm stage approve <stage-id>`. Nothing that went wrong in a build can reach users without this step.
+
+A version with a hyphen (`0.3.0-beta.1`) is published as a pre-release on GitHub. For npm, stage and approve those with a tag by hand, so `latest` does not move.
 
 ## One-time setup
 
@@ -70,6 +72,7 @@ npm trusted publishing can only be set up for a package that exists. So the name
    - repository: `playwright-layout-guard`
    - workflow filename: `release.yml`
    - environment: leave empty
+   - allowed action: **stage** ("npm stage publish"). The workflow cannot publish directly, a maintainer approves each version. If you choose "publish" instead, replace `npm stage publish` by `npm publish` in `release.yml`.
 4. In the same settings choose "Require two-factor authentication and disallow tokens", so that only the workflow can publish from now on.
 5. Mark the placeholder: `npm deprecate playwright-layout-guard@0.0.0 "Placeholder, use 0.1.0 or newer"`.
 6. Release `0.1.0` as described above ("A release"). The first changeset is already in the repository.
