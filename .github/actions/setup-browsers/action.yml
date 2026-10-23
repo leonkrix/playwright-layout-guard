@@ -1,5 +1,5 @@
 name: Set up Playwright browsers
-description: Installs browsers and their system libraries, with a cache for the browser downloads and a retry for the system packages
+description: Installs browsers and their system libraries, with a cache for the browser downloads and a retry for stalled downloads
 
 inputs:
   browsers:
@@ -9,25 +9,31 @@ inputs:
 runs:
   using: composite
   steps:
-    # The download of the browsers is cached per Playwright version (the lockfile changes with it).
-    # The system libraries come from apt and are installed every time.
+    # The cache is keyed by the Playwright version and not by the lockfile, so that a weekly update of
+    # another dependency does not throw the browsers away
+    - name: Playwright version
+      id: version
+      shell: bash
+      run: echo "playwright=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
     - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ~/.cache/ms-playwright
-        key: playwright-${{ runner.os }}-${{ inputs.browsers }}-${{ hashFiles('pnpm-lock.yaml') }}
+        key: playwright-${{ runner.os }}-${{ steps.version.outputs.playwright }}-${{ inputs.browsers }}
 
-    # The apt mirrors of the runners sometimes stall for minutes (seen with the WebKit packages), so
-    # every attempt has its own time limit and a stalled one is tried again
+    # A normal install takes one or two minutes. The mirrors of the runners (apt) and the download
+    # server sometimes stall, once for twelve minutes, so every attempt has a short time limit and a
+    # stalled one is tried again; the system libraries come from apt and are installed every time
     - name: Install browsers and system libraries
       shell: bash
       env:
         BROWSERS: ${{ inputs.browsers }}
       run: |
         for attempt in 1 2 3; do
-          if timeout 360 pnpm exec playwright install --with-deps $BROWSERS; then
+          if timeout 200 pnpm exec playwright install --with-deps $BROWSERS; then
             exit 0
           fi
-          echo "Attempt $attempt did not finish, trying again"
+          echo "Attempt $attempt did not finish in time, trying again"
         done
         echo "The browsers could not be installed"
         exit 1
