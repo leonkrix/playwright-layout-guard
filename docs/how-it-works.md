@@ -56,6 +56,7 @@ await guard.forget();
 
 - **Frames and timers:** the guard looks on every animation frame. When no frame has come for 60 ms (a page in the background, the first page of an iframe in Firefox, which is not drawn yet), a timer looks instead, so that a shift cannot hide between frames.
 - **A new document in the same window:** Firefox gives the first page of an iframe the window of its empty starting page. The animation frames and listeners of the old document are gone then, so the guard notices the new document and starts its loop and listeners again.
+- **A new window size:** the guard also notices a changed window size by itself, because Firefox delivers the resize event after the page has been laid out for the new size. It then keeps what it finds for 250 ms: if the resize event comes, that was the cause and it is dropped; if it does not (the page itself got wider than the window, as it does on a phone), it is reported.
 - **Resizes while the page settles:** a resize in the first 300 ms after the load (Firefox sizes an iframe a moment after it loaded) makes the guard start over, but not go quiet. A resize later is a visitor's resize: quiet for `quietMs`.
 
 ## Web components and frames

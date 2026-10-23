@@ -75,6 +75,8 @@ export function guardInPage(options: PageOptions): void {
   // sticky or inline later (a class that is set on scroll), and reading every style on every frame is
   // too slow on a long page
   const STYLE_LIFETIME = 500;
+  // Milliseconds to wait for the resize event after the size of the window has changed
+  const RESIZE_WAIT = 250;
   // Milliseconds after the load during which a resize is part of the page settling
   const RESIZE_GRACE = 300;
   let loadedAt = 0;
@@ -170,6 +172,10 @@ export function guardInPage(options: PageOptions): void {
     if (reported.has(key) || reportedCount >= options.maxReports) {
       return;
     }
+    if (pendingUntil > 0 && performance.now() < pendingUntil) {
+      held.push({ key, shift });
+      return;
+    }
     reported.add(key);
     reportedCount += 1;
     // Looked up when it is needed: in a frame the function of the test can arrive after this script
@@ -182,8 +188,35 @@ export function guardInPage(options: PageOptions): void {
     options.ignore.some((selector) => closestAcross(element, selector) !== null);
 
   let lastScan = 0;
+  let lastSize = '';
+  // When the size of the window changed, the guard waits a moment for the resize event before it
+  // reports anything: what it finds meanwhile is kept, and thrown away if the event comes
+  let pendingUntil = 0;
+  let held: { key: string; shift: Record<string, unknown> }[] = [];
   const scan = (): void => {
     lastScan = performance.now();
+    // A document that is being written again (document.open) or replaced has no root for a moment
+    if ((document.documentElement as HTMLElement | null) === null) {
+      return;
+    }
+    // A new window size is noticed here as well and not only by its event: Firefox delivers the event
+    // after the page has already been laid out for the new size, and a frame in between would see the
+    // rearranged page as a shift
+    const size = `${String(window.innerWidth)}x${String(window.innerHeight)}`;
+    if (lastSize !== '' && size !== lastSize) {
+      pendingUntil = performance.now() + RESIZE_WAIT;
+    }
+    lastSize = size;
+    if (pendingUntil > 0 && performance.now() >= pendingUntil) {
+      // No resize event came: the page itself changed the size (it got wider than the window), and
+      // what was found is a real shift
+      pendingUntil = 0;
+      const kept = held;
+      held = [];
+      for (const entry of kept) {
+        send(entry.key, entry.shift);
+      }
+    }
     // How far the page was scrolled since the last look: a part that moves exactly as far is stuck to
     // the window (a header that sticks, a table of contents that follows), which is not a layout change
     const scrolled = window.scrollY - scrollTop;
@@ -322,9 +355,10 @@ export function guardInPage(options: PageOptions): void {
       armed &&
       loaded &&
       pageHeight !== undefined &&
-      height - pageHeight > options.tolerance &&
-      // A page that is still shorter than the window has nothing below the fold that could be pushed
-      height > window.innerHeight &&
+      (options.pageHeight === 'any'
+        ? Math.abs(height - pageHeight) > options.tolerance
+        : // A page that is still shorter than the window has nothing below the fold that could be pushed
+          height - pageHeight > options.tolerance && height > window.innerHeight) &&
       performance.now() >= quietUntil
     ) {
       send(`page:${String(pageHeight)}:${String(height)}`, {
@@ -377,9 +411,18 @@ export function guardInPage(options: PageOptions): void {
   // What the visitor asks for (a new window size, an opened panel) is not a surprise
   // A window that is sized while the page settles (Firefox sizes the first page of an iframe a moment
   // after the load) is not a visitor's resize: the guard only starts over, it does not go quiet
-  window.addEventListener('resize', () => {
-    forget(loaded && performance.now() - loadedAt > RESIZE_GRACE);
-  });
+  const onResize = (): void => {
+    pendingUntil = 0;
+    held = [];
+    // While the page is loading nothing is reported anyway, and a phone sizes its window at that
+    // time (a quiet period would swallow what comes right after). In a frame the browser sizes the
+    // page a moment after the load as well. A window that a test or a visitor sizes later is sized
+    // on purpose, whenever it happens
+    const settling =
+      !loaded || (window !== window.top && performance.now() - loadedAt <= RESIZE_GRACE);
+    forget(!settling);
+  };
+  window.addEventListener('resize', onResize);
   window.addEventListener('popstate', () => {
     forget();
   });
