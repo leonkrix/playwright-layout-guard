@@ -1,6 +1,6 @@
 {
   "name": "playwright-layout-guard",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A Playwright fixture that fails a test when something on the page moves or changes its size. Works in Chromium, Firefox and WebKit, names the element and how far it moved.",
   "keywords": [
     "playwright",
