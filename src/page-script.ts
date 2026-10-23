@@ -22,7 +22,6 @@ export function guardInPage(options: PageOptions): void {
   }
 
   const globalScope = window as unknown as Record<string, unknown>;
-  const report = globalScope[options.report] as ((shift: unknown) => void) | undefined;
   // Installing the guard twice (an init script that runs again) must not double the work
   if (globalScope[`${options.report}:controller`] !== undefined) {
     return;
@@ -76,6 +75,11 @@ export function guardInPage(options: PageOptions): void {
   // sticky or inline later (a class that is set on scroll), and reading every style on every frame is
   // too slow on a long page
   const STYLE_LIFETIME = 500;
+  // Milliseconds after the load during which a resize is part of the page settling
+  const RESIZE_GRACE = 300;
+  let loadedAt = 0;
+  // Milliseconds without an animation frame before the timer looks as well
+  const QUIET_FRAMES = 60;
   // Milliseconds after the load event before the guard reports anything
   const SETTLE_AFTER_LOAD = 50;
   const inline = new WeakMap<Element, { value: boolean; at: number }>();
@@ -128,7 +132,7 @@ export function guardInPage(options: PageOptions): void {
   };
 
   // Inside a frame the report says which frame, because the same init script runs in every one
-  const framePrefix = window === window.top ? '' : `[frame ${location.pathname}] `;
+  const framePrefix = (): string => (window === window.top ? '' : `[frame ${location.pathname}] `);
 
   /** A short way to find the element again: tag, id, classes, and the path to the nearest id */
   const describe = (element: HTMLElement): string => {
@@ -148,7 +152,7 @@ export function guardInPage(options: PageOptions): void {
       }
       node = parentOf(node);
     }
-    return `${framePrefix}${parts.join(' > ')}`;
+    return `${framePrefix()}${parts.join(' > ')}`;
   };
 
   // The first words of the text, cut at a word and marked as cut, to recognise the element
@@ -168,6 +172,8 @@ export function guardInPage(options: PageOptions): void {
     }
     reported.add(key);
     reportedCount += 1;
+    // Looked up when it is needed: in a frame the function of the test can arrive after this script
+    const report = globalScope[options.report] as ((shift: unknown) => void) | undefined;
     report?.({ ...shift, at: Math.round(performance.now()) });
   };
 
@@ -175,7 +181,9 @@ export function guardInPage(options: PageOptions): void {
     options.ignore.length > 0 &&
     options.ignore.some((selector) => closestAcross(element, selector) !== null);
 
+  let lastScan = 0;
   const scan = (): void => {
+    lastScan = performance.now();
     // How far the page was scrolled since the last look: a part that moves exactly as far is stuck to
     // the window (a header that sticks, a table of contents that follows), which is not a layout change
     const scrolled = window.scrollY - scrollTop;
@@ -321,7 +329,7 @@ export function guardInPage(options: PageOptions): void {
     ) {
       send(`page:${String(pageHeight)}:${String(height)}`, {
         kind: 'page-height',
-        element: `${framePrefix}the page`,
+        element: `${framePrefix()}the page`,
         text: '',
         before: { top: 0, left: 0, width: 0, height: pageHeight },
         after: { top: 0, left: 0, width: 0, height },
@@ -331,13 +339,25 @@ export function guardInPage(options: PageOptions): void {
     pageHeight = height;
   };
 
-  const sample = (): void => {
-    scan();
-    window.requestAnimationFrame(sample);
+  // Each document gets its own loop: when the document is replaced, the old loop stops
+  let generation = 0;
+  const startLoop = (): void => {
+    generation += 1;
+    const mine = generation;
+    const tick = (): void => {
+      if (mine !== generation) {
+        return;
+      }
+      scan();
+      window.requestAnimationFrame(tick);
+    };
+    window.requestAnimationFrame(tick);
   };
 
-  const forget = (): void => {
-    quietUntil = performance.now() + options.quietMs;
+  const forget = (quiet = true): void => {
+    if (quiet) {
+      quietUntil = performance.now() + options.quietMs;
+    }
     baselines = new WeakMap();
     pageHeight = undefined;
   };
@@ -355,20 +375,14 @@ export function guardInPage(options: PageOptions): void {
   globalScope[`${options.report}:controller`] = controller;
 
   // What the visitor asks for (a new window size, an opened panel) is not a surprise
-  window.addEventListener('resize', forget);
-  document.addEventListener('toggle', forget, true);
-  // The toggle event of a <details> comes a moment after the panel has opened (a task of its own),
-  // and a frame can be sampled in between on a busy machine: the click on the summary is the first sign
-  document.addEventListener(
-    'click',
-    (event) => {
-      if (event.target instanceof Element && event.target.closest('summary') !== null) {
-        forget();
-      }
-    },
-    true,
-  );
-  window.addEventListener('popstate', forget);
+  // A window that is sized while the page settles (Firefox sizes the first page of an iframe a moment
+  // after the load) is not a visitor's resize: the guard only starts over, it does not go quiet
+  window.addEventListener('resize', () => {
+    forget(loaded && performance.now() - loadedAt > RESIZE_GRACE);
+  });
+  window.addEventListener('popstate', () => {
+    forget();
+  });
   // A page that opens a new view with a new history entry (a single page app) shows something new on
   // purpose. replaceState does not count: pages call it all the time while they load (to tidy the
   // address, to remember the scroll position), and the guard must not go blind for that
@@ -378,11 +392,6 @@ export function guardInPage(options: PageOptions): void {
     forget();
   };
 
-  window.requestAnimationFrame(sample);
-  // A page can change a lot before its first frame (a stylesheet that arrives late): the guard also
-  // looks when the document is parsed and whenever a stylesheet, a script or a picture has loaded
-  document.addEventListener('DOMContentLoaded', scan);
-  document.addEventListener('load', scan, true);
   const arm = (): void => {
     // What the load event itself changes (a script that starts the page) is part of the baseline: the
     // guard takes it a moment later, and starts reporting from then on. A timer and not a frame, so
@@ -391,11 +400,60 @@ export function guardInPage(options: PageOptions): void {
       scan();
       armed = true;
       loaded = true;
+      loadedAt = performance.now();
     }, SETTLE_AFTER_LOAD);
   };
-  if (document.readyState === 'complete') {
-    arm();
-  } else {
-    window.addEventListener('load', arm, { once: true });
-  }
+
+  // Everything that belongs to one document. A frame can get a new document inside the same window
+  // (Firefox does that for the first page of an iframe): the animation frames and the listeners of the
+  // old document are gone then, so this is done again
+  const watch = (): void => {
+    startLoop();
+    document.addEventListener(
+      'toggle',
+      () => {
+        forget();
+      },
+      true,
+    );
+    // The toggle event of a <details> comes a moment after the panel has opened (a task of its own),
+    // and a frame can be sampled in between on a busy machine: the click on the summary is the first sign
+    document.addEventListener(
+      'click',
+      (event) => {
+        if (event.target instanceof Element && event.target.closest('summary') !== null) {
+          forget();
+        }
+      },
+      true,
+    );
+    // A page can change a lot before its first frame (a stylesheet that arrives late): the guard also
+    // looks when the document is parsed and whenever a stylesheet, a script or a picture has loaded
+    document.addEventListener('DOMContentLoaded', scan);
+    document.addEventListener('load', scan, true);
+    if (document.readyState === 'complete') {
+      arm();
+    } else {
+      window.addEventListener('load', arm, { once: true });
+    }
+  };
+
+  let watched = document;
+  watch();
+  // The timer also looks when no animation frame has come for a while: a frame that is not drawn yet
+  // (the first page of an iframe in Firefox), a page in the background
+  window.setInterval(() => {
+    if (document === watched && performance.now() - lastScan > QUIET_FRAMES) {
+      scan();
+    }
+    if (document !== watched) {
+      watched = document;
+      armed = options.start === 'immediate';
+      loaded = false;
+      baselines = new WeakMap();
+      pageHeight = undefined;
+      scrollTop = window.scrollY;
+      watch();
+    }
+  }, 25);
 }

@@ -52,6 +52,12 @@ await expect(page.getByRole('main')).toBeVisible();
 await guard.forget();
 ```
 
+## Timing details that matter
+
+- **Frames and timers:** the guard looks on every animation frame. When no frame has come for 60 ms (a page in the background, the first page of an iframe in Firefox, which is not drawn yet), a timer looks instead, so that a shift cannot hide between frames.
+- **A new document in the same window:** Firefox gives the first page of an iframe the window of its empty starting page. The animation frames and listeners of the old document are gone then, so the guard notices the new document and starts its loop and listeners again.
+- **Resizes while the page settles:** a resize in the first 300 ms after the load (Firefox sizes an iframe a moment after it loaded) makes the guard start over, but not go quiet. A resize later is a visitor's resize: quiet for `quietMs`.
+
 ## Web components and frames
 
 Elements inside open shadow trees are watched like all others; the host counts as their parent, and `ignore` and `data-layout-fluid` work across the border. Closed shadow trees are not reachable from a script and are not seen. The init script runs in every frame, so an iframe is watched on its own (a report from inside a frame starts with `[frame /path]`).
