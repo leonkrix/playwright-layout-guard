@@ -100,6 +100,7 @@ All optional. Set them with `test.use({ layoutGuard: { ... } })`, or pass them t
 | `scope`                   | `'body'`              | CSS selector of the part of the page to watch.                                                                            |
 | `start`                   | `'load'`              | `'load'` reports from the load event on. `'immediate'` also reports what moves while the page loads (noisier, see below). |
 | `ignoreInsideInteractive` | `true`                | Leave out what is inside a link or a button.                                                                              |
+| `pageHeight`              | `'growth'`            | `'growth'`: the page became higher than the window. `'any'`: also a page that became lower.                               |
 | `maxReports`              | `50`                  | The most shifts reported in one test.                                                                                     |
 
 ### Without the fixture

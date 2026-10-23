@@ -161,3 +161,54 @@ test('looks into a frame as well', async ({ page }) => {
     guard.shifts.every((entry) => entry.element.startsWith('[frame /banner-after-load.html] ')),
   ).toBe(true);
 });
+
+test('a resize right after the load is the test sizing the window, not a shift', async ({
+  page,
+}) => {
+  const guard = await installLayoutGuard(page);
+  await page.goto('/resize-layout.html');
+  // After the guard has started to report, but soon after the load: the window is sized on purpose
+  await page.waitForTimeout(120);
+  await page.setViewportSize({ width: 420, height: 800 });
+  await page.waitForTimeout(500);
+  expect(guard.shifts).toEqual([]);
+});
+
+test('does not throw while the document of the page is being written again', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => {
+    errors.push(error.message);
+  });
+  await installLayoutGuard(page);
+  await page.goto('/document-open.html');
+  await page.waitForTimeout(700);
+  expect(errors).toEqual([]);
+  await expect(page.getByRole('heading', { name: 'After' })).toBeVisible();
+});
+
+test('a page that gets lower is only reported when pageHeight is any', async ({ page }) => {
+  const calm = await installLayoutGuard(page);
+  await page.goto('/page-shrinks.html');
+  await page.waitForTimeout(600);
+  expect(calm.shifts).toEqual([]);
+
+  const strict = await installLayoutGuard(page, { pageHeight: 'any' });
+  await page.reload();
+  await expect.poll(() => strict.shifts.length, { timeout: 3000 }).toBeGreaterThan(0);
+  expect(strict.shifts[0]?.kind).toBe('page-height');
+});
+
+test.describe('on a phone', () => {
+  test.use({ isMobile: true, hasTouch: true, viewport: { width: 412, height: 800 } });
+
+  test('a shift that makes the page wider than the window is still a shift', async ({
+    page,
+    browserName,
+  }) => {
+    // Firefox does not emulate a phone
+    test.skip(browserName === 'firefox', 'isMobile is not supported in Firefox');
+    const guard = await installLayoutGuard(page);
+    await page.goto('/sideways-phone.html');
+    await expect.poll(() => guard.shifts.length, { timeout: 3000 }).toBeGreaterThan(0);
+  });
+});

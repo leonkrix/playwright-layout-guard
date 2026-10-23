@@ -55,6 +55,12 @@ export interface LayoutGuardOptions {
    * Default `true`.
    */
   ignoreInsideInteractive?: boolean;
+  /**
+   * Which changes of the height of the page count. `growth` (the default): the page became higher
+   * than the window, which means that something was added in the flow. `any`: also a page that
+   * became lower, for a page that must not change its height at all.
+   */
+  pageHeight?: 'growth' | 'any';
   /** The most shifts that are reported in one test. Default 50. */
   maxReports?: number;
 }
@@ -69,5 +75,6 @@ export interface PageOptions {
   scope: string;
   start: 'load' | 'immediate';
   ignoreInsideInteractive: boolean;
+  pageHeight: 'growth' | 'any';
   maxReports: number;
 }

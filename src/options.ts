@@ -8,6 +8,7 @@ export const DEFAULTS = {
   scope: 'body',
   start: 'load' as 'load' | 'immediate',
   ignoreInsideInteractive: true,
+  pageHeight: 'growth' as 'growth' | 'any',
   maxReports: 50,
 };
 
@@ -24,6 +25,10 @@ export function resolveOptions(options: LayoutGuardOptions = {}, report: string)
   }
   if (!Number.isInteger(merged.maxReports) || merged.maxReports < 1) {
     throw new RangeError('layout-guard: maxReports must be a whole number of 1 or more');
+  }
+  const pageHeight: string = merged.pageHeight;
+  if (pageHeight !== 'growth' && pageHeight !== 'any') {
+    throw new TypeError(`layout-guard: pageHeight must be "growth" or "any", not "${pageHeight}"`);
   }
   if (!/^[a-zA-Z_:][-a-zA-Z0-9_:.]*$/.test(merged.fluidAttribute)) {
     throw new TypeError(

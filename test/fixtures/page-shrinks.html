@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>The end of the page is removed after the load</title>
+    <link rel="stylesheet" href="/base.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Content</h1>
+      <p class="card" id="card">Nothing above the footer moves when it goes away.</p>
+    </main>
+    <footer id="footer" style="height: 1500px">A footer that is removed</footer>
+    <script>
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          document.getElementById('footer').remove();
+        }, 150);
+      });
+    </script>
+  </body>
+</html>

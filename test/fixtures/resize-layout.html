@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>A layout that changes with the width of the window</title>
+    <link rel="stylesheet" href="/base.css" />
+    <style>
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+      .col {
+        width: 300px;
+        height: 80px;
+        background: #ddd;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Content</h1>
+      <div class="row">
+        <div class="col">One</div>
+        <div class="col">Two</div>
+        <div class="col">Three</div>
+      </div>
+      <p class="card" id="card">Below the columns. It moves down when they wrap.</p>
+    </main>
+    <script>
+      // Like an app that lays itself out again a moment after the resize event (an effect, a
+      // ResizeObserver): the second change comes after the window has already changed its size
+      window.addEventListener('resize', () => {
+        setTimeout(() => {
+          document.querySelector('.row').style.marginLeft = '40px';
+        }, 100);
+      });
+    </script>
+  </body>
+</html>

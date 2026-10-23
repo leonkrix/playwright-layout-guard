@@ -30,6 +30,7 @@ describe('resolveOptions', () => {
     [{ maxReports: 2.5 }, /maxReports/],
     [{ fluidAttribute: 'data layout' }, /fluidAttribute/],
     [{ fluidAttribute: '' }, /fluidAttribute/],
+    [{ pageHeight: 'shrink' as 'any' }, /pageHeight/],
   ])('refuses %o', (options, message) => {
     expect(() => resolveOptions(options, 'r')).toThrow(message);
   });

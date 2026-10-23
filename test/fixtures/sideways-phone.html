@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>A block moves sideways and makes the page wider than the phone</title>
+    <link rel="stylesheet" href="/base.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Content</h1>
+      <p class="card" id="card">This block moves to the right after the load.</p>
+    </main>
+    <script>
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          const card = document.getElementById('card');
+          card.style.position = 'relative';
+          card.style.left = '40px';
+          card.style.marginLeft = '40px';
+          card.style.width = '110%';
+        }, 150);
+      });
+    </script>
+  </body>
+</html>
