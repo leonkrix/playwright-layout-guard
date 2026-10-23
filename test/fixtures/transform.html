@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Things that move with transform and text that changes</title>
+    <link rel="stylesheet" href="/base.css" />
+    <style>
+      .slide {
+        width: 80px;
+        height: 30px;
+        background: #fecaca;
+        animation: slide 400ms ease-in-out infinite alternate;
+      }
+      @keyframes slide {
+        to {
+          transform: translate(120px, 20px);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="slide" id="slide"></div>
+      <p class="card">
+        The word <span id="word">short</span> changes its length, in the middle of a line.
+      </p>
+      <p class="card" id="below">A card below.</p>
+    </main>
+    <script>
+      let longer = false;
+      setInterval(() => {
+        longer = !longer;
+        document.getElementById('word').textContent = longer ? 'a little longer' : 'short';
+      }, 150);
+    </script>
+  </body>
+</html>

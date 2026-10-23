@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>A banner that appears when a button is pressed</title>
+    <link rel="stylesheet" href="/base.css" />
+  </head>
+  <body>
+    <div id="slot"></div>
+    <main>
+      <button id="open" type="button">Show the offer</button>
+      <p class="card" id="card">This card jumps down when the button is pressed.</p>
+    </main>
+    <script>
+      document.getElementById('open').addEventListener('click', () => {
+        const banner = document.createElement('div');
+        banner.className = 'banner';
+        banner.textContent = 'Offer';
+        document.getElementById('slot').appendChild(banner);
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Stable</title>
+    <link rel="stylesheet" href="/base.css" />
+  </head>
+  <body>
+    <main>
+      <h1>A page that stays put</h1>
+      <p class="card">The text changes its colour when the button is pressed, nothing else.</p>
+      <button id="go" type="button">Press</button>
+    </main>
+    <script>
+      document.getElementById('go').addEventListener('click', () => {
+        document.querySelector('.card').style.background = '#bbf7d0';
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>A box whose parts rearrange</title>
+    <link rel="stylesheet" href="/base.css" />
+    <style>
+      .board {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        width: 320px;
+        height: 120px;
+        border: 1px solid #999;
+      }
+      .tile {
+        width: 100px;
+        height: 40px;
+        background: #bfdbfe;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Board</h1>
+      <div class="board" id="board" data-layout-fluid>
+        <div class="tile" id="a">A</div>
+        <div class="tile" id="b">B</div>
+        <div class="tile" id="c">C</div>
+      </div>
+      <button id="shuffle" type="button">Shuffle</button>
+    </main>
+    <script>
+      document.getElementById('shuffle').addEventListener('click', () => {
+        const board = document.getElementById('board');
+        board.appendChild(board.firstElementChild);
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,31 @@
+name: Bug or false positive
+description: The guard fails a test although nothing jumps, or it misses something that does.
+labels: [bug]
+body:
+  - type: textarea
+    id: message
+    attributes:
+      label: The message of the failed test (or what was missed)
+      description: Paste the text the guard printed. It names the element and how far it moved.
+    validations:
+      required: true
+  - type: textarea
+    id: page
+    attributes:
+      label: Small page that shows it
+      description: The HTML and CSS (and script) that reproduce it, as small as you can make it.
+      render: html
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: playwright-layout-guard, @playwright/test, the browser, Node
+      placeholder: 'guard 0.1.0, Playwright 1.64.1, Chromium, Node 24'
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+test-results/
+playwright-report/
+survey-results/
+*.tgz
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store

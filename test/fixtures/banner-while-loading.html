@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>A banner that appears while the page is still loading</title>
+    <link rel="stylesheet" href="/base.css" />
+  </head>
+  <body>
+    <div id="slot"></div>
+    <main>
+      <h1 id="title">Content</h1>
+      <p class="card" id="card">This card is pushed down before the load event.</p>
+    </main>
+    <script>
+      // Added by a script that runs during the load, not after it
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const banner = document.createElement('div');
+          banner.className = 'banner';
+          banner.textContent = 'Cookie notice';
+          document.getElementById('slot').appendChild(banner);
+        });
+      });
+    </script>
+    <!-- A script that answers slowly keeps the load event waiting -->
+    <script src="/slow.js"></script>
+  </body>
+</html>

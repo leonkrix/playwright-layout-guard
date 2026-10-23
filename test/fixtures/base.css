@@ -1,0 +1,23 @@
+body {
+  margin: 0;
+  padding: 16px;
+  font:
+    16px/1.4 system-ui,
+    sans-serif;
+}
+
+main {
+  display: block;
+  max-width: 40rem;
+}
+
+.banner {
+  height: 60px;
+  background: #fde68a;
+}
+
+.card {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid #ccc;
+}

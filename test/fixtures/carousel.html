@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>A carousel whose slides move all the time</title>
+    <link rel="stylesheet" href="/base.css" />
+    <style>
+      .carousel {
+        position: relative;
+        width: 320px;
+        height: 60px;
+        overflow: hidden;
+        border: 1px solid #999;
+      }
+      .slide {
+        position: absolute;
+        top: 0;
+        width: 100px;
+        height: 60px;
+        background: #ddd6fe;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>News</h1>
+      <div class="carousel" id="carousel">
+        <div class="slide" id="slide">Slide</div>
+      </div>
+      <p class="card">Below the carousel.</p>
+    </main>
+    <script>
+      let at = 0;
+      setInterval(() => {
+        at = (at + 20) % 200;
+        document.getElementById('slide').style.left = `${at}px`;
+      }, 100);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>A banner that appears after the page has loaded</title>
+    <link rel="stylesheet" href="/base.css" />
+  </head>
+  <body>
+    <div id="slot"></div>
+    <main>
+      <h1 id="title">Content</h1>
+      <p class="card" id="card">This card is pushed down when the banner arrives.</p>
+    </main>
+    <script>
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          const banner = document.createElement('div');
+          banner.className = 'banner';
+          banner.textContent = 'Cookie notice';
+          document.getElementById('slot').appendChild(banner);
+        }, 150);
+      });
+    </script>
+  </body>
+</html>

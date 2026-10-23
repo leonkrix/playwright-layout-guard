@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>A web component whose inside changes after the load</title>
+    <link rel="stylesheet" href="/base.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Content</h1>
+      <x-card id="widget"></x-card>
+    </main>
+    <script>
+      class XCard extends HTMLElement {
+        connectedCallback() {
+          const root = this.attachShadow({ mode: 'open' });
+          root.innerHTML =
+            '<style>:host{display:block}.banner{background:#ccc;height:60px}</style>' +
+            '<div id="slot"></div><p id="text">Text inside the shadow tree.</p>';
+          window.addEventListener('load', () => {
+            setTimeout(() => {
+              const banner = document.createElement('div');
+              banner.className = 'banner';
+              banner.textContent = 'Notice';
+              root.getElementById('slot').appendChild(banner);
+            }, 150);
+          });
+        }
+      }
+      customElements.define('x-card', XCard);
+    </script>
+  </body>
+</html>
