@@ -44,6 +44,10 @@ jobs:
             exit 1
           fi
 
+      - uses: ./.github/actions/setup-browsers
+        with:
+          browsers: chromium firefox webkit
+
       - name: Full check before anything is published
         run: |
           pnpm lint
@@ -52,7 +56,6 @@ jobs:
           pnpm test:unit
           pnpm build
           pnpm lint:package
-          pnpm exec playwright install --with-deps chromium firefox webkit
           pnpm test
 
       # npm trusted publishing: no token is stored anywhere. The package names this repository and
