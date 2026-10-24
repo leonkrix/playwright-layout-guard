@@ -2,6 +2,25 @@
 
 Releases are tags. Versions follow [semantic versioning](https://semver.org); while the version is `0.x` a minor version may contain breaking changes (they are written down in the changelog).
 
+## The short version
+
+```bash
+# While you work, in every pull request that users can see (fix, option, behaviour):
+pnpm changeset                  # one sentence; it becomes a line of the changelog
+
+# Release day, from an up-to-date main:
+git switch main && git pull
+git switch -c release/next
+pnpm version-packages           # reads the changesets: new version in package.json, CHANGELOG.md written, changesets removed
+git add -A && git commit -m "chore: release X.Y.Z"
+git push -u origin release/next # pull request, wait for "CI passed", look at CHANGELOG.md, squash and merge
+
+git switch main && git pull     # the squash commit is a new commit: tag that one
+pnpm release:tag                # checks that it is main and pushes v<version>
+```
+
+Then npmjs.com, the package, **Staged Packages**, **Approve** (two-factor). Done: the changelog is written first (`pnpm version-packages`, reviewed in the release pull request), then the tag releases exactly that state.
+
 ## Every change
 
 A pull request that changes what users see adds a changeset:

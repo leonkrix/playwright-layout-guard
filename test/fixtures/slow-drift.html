@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>A part that drifts by a pixel in every frame</title>
+    <link rel="stylesheet" href="/base.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Content</h1>
+      <p class="card" id="drifter" style="position: relative">Drifts to the right, slowly.</p>
+    </main>
+    <script>
+      // One pixel per frame is below the tolerance in every single frame, and 60 px in a second
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          let left = 0;
+          const step = () => {
+            left += 1;
+            document.getElementById('drifter').style.left = `${left}px`;
+            if (left < 120) {
+              requestAnimationFrame(step);
+            }
+          };
+          requestAnimationFrame(step);
+        }, 150);
+      });
+    </script>
+  </body>
+</html>

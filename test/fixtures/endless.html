@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>An animation that never ends</title>
+    <link rel="stylesheet" href="/base.css" />
+    <style>
+      @keyframes slide {
+        from {
+          left: 0;
+        }
+        to {
+          left: 80px;
+        }
+      }
+      #ticker {
+        position: relative;
+        animation: slide 1s ease-in-out infinite alternate;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Content</h1>
+      <p class="card" id="ticker">Moves with left for ever.</p>
+    </main>
+  </body>
+</html>

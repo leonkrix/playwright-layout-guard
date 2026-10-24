@@ -59,6 +59,18 @@ await guard.forget();
 - **A new window size:** the guard also notices a changed window size by itself, because Firefox delivers the resize event after the page has been laid out for the new size. It then keeps what it finds for 250 ms: if the resize event comes, that was the cause and it is dropped; if it does not (the page itself got wider than the window, as it does on a phone), it is reported.
 - **Resizes while the page settles:** a resize in the first 300 ms after the load (Firefox sizes an iframe a moment after it loaded) makes the guard start over, but not go quiet. A resize later is a visitor's resize: quiet for `quietMs`.
 
+## Animations that are meant
+
+With `animations: 'allow'` the guard asks the browser (`document.getAnimations()`) on every look which animations are running. A CSS transition or CSS animation counts when it ends (a finite number of iterations) and changes a property that takes part in the layout: `top`, `left`, `right`, `bottom`, `inset`, `width`, `height`, the minimum and maximum sizes, `margin`, `padding`, the border widths, `font-size`, `line-height`, `letter-spacing`, `gap`, `flex`, `grid` and `aspect-ratio`. While one runs, and for 100 ms after the last one ended, the guard keeps its picture of the page up to date but reports nothing, so that the last frame of the animation and what it pushed settle. Animations of `transform`, `opacity` and colors are no shifts anyway, and an animation that never ends is deliberately not let go.
+
+## The picture of what moved
+
+A shift knows the page it was found on (Playwright tells the test which frame called). `guard.screenshot()` draws the boxes of the shifts of that page on top of it (an element with absolute position, with the style set one property at a time, so that it also works with a strict content security policy), takes a picture of the part around them with Playwright, and removes the marks again. The guard is paused while the marks stand, so it does not look at them. Places inside a frame are relative to the frame and are not drawn.
+
+## The baseline
+
+A baseline entry is `kind`, `url` (the path of the page, without query and hash) and `element` (the short path that the message shows). That is deliberately coarse: it survives a change of how far something moves, and it does not survive a change of the markup that renames the element, which is the moment to look at it again. The file is read when it is needed, written sorted and without doubles, replaced atomically, and a lock directory next to it keeps several workers from losing each other's entries.
+
 ## Web components and frames
 
 Elements inside open shadow trees are watched like all others; the host counts as their parent, and `ignore` and `data-layout-fluid` work across the border. Closed shadow trees are not reachable from a script and are not seen. The init script runs in every frame, so an iframe is watched on its own (a report from inside a frame starts with `[frame /path]`).

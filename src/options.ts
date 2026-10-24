@@ -9,12 +9,30 @@ export const DEFAULTS = {
   start: 'load' as 'load' | 'immediate',
   ignoreInsideInteractive: true,
   pageHeight: 'growth' as 'growth' | 'any',
+  animations: 'report' as 'report' | 'allow',
   maxReports: 50,
 };
 
+/** The options that are used on the side of the test and not sent to the page. */
+export interface NodeOptions {
+  baseline: string | undefined;
+  screenshot: boolean;
+}
+
+export function resolveNodeOptions(options: LayoutGuardOptions = {}): NodeOptions {
+  if (options.baseline?.trim() === '') {
+    throw new TypeError('layout-guard: baseline must be the path of a file');
+  }
+  return { baseline: options.baseline, screenshot: options.screenshot ?? true };
+}
+
 /** Fills in the defaults and refuses values that cannot work, so a typo fails at once and not silently. */
 export function resolveOptions(options: LayoutGuardOptions = {}, report: string): PageOptions {
-  const merged = { ...DEFAULTS, ...definedOnly(options) };
+  // What is for the side of the test (the baseline, the picture) does not go to the page
+  const forPage: LayoutGuardOptions = { ...options };
+  delete forPage.baseline;
+  delete forPage.screenshot;
+  const merged = { ...DEFAULTS, ...definedOnly(forPage) };
   if (!Number.isFinite(merged.tolerance) || merged.tolerance < 0) {
     throw new RangeError(
       `layout-guard: tolerance must be 0 or more, not ${String(merged.tolerance)}`,
@@ -29,6 +47,12 @@ export function resolveOptions(options: LayoutGuardOptions = {}, report: string)
   const pageHeight: string = merged.pageHeight;
   if (pageHeight !== 'growth' && pageHeight !== 'any') {
     throw new TypeError(`layout-guard: pageHeight must be "growth" or "any", not "${pageHeight}"`);
+  }
+  const animations: string = merged.animations;
+  if (animations !== 'report' && animations !== 'allow') {
+    throw new TypeError(
+      `layout-guard: animations must be "report" or "allow", not "${animations}"`,
+    );
   }
   if (!/^[a-zA-Z_:][-a-zA-Z0-9_:.]*$/.test(merged.fluidAttribute)) {
     throw new TypeError(

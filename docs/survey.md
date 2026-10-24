@@ -2,7 +2,7 @@
 
 Before the first release the guard was tried on 23 public pages: documentation sites (Playwright, React, MDN, Node.js, GitHub Docs, Vite, Tailwind, Astro, web.dev, Python, Rust, Kubernetes, Vue, Svelte, Angular, TypeScript, Next.js, Go), a wiki article, Hacker News and two news sites. Each page was opened in Chromium once at desktop size (1280 x 800) and once as a phone (iPhone 13), left alone for four seconds, scrolled from top to bottom and back once, like a reader would. No clicks, no sign-in, no crawling. Next to the guard the script measured **CLS with the browser's own Layout Instability API**, so the two can be compared.
 
-`pnpm build && pnpm survey` repeats it (about ten minutes, needs the network). The pages change, so the numbers will not be the same twice; the table is a snapshot from October 2026.
+`pnpm build && pnpm survey` repeats it (about ten minutes, needs the network). The pages change, so the numbers will not be the same twice; the table is a snapshot from October 2026, taken with version 0.2.0 (version 0.3.0 also finds parts that drift slowly, which none of these pages did in the snapshot).
 
 ## Result
 

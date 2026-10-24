@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>A panel that slides open, and a block that jumps</title>
+    <link rel="stylesheet" href="/base.css" />
+    <style>
+      #panel {
+        height: 0;
+        overflow: hidden;
+        transition: height 300ms ease;
+      }
+      #panel > div {
+        height: 120px;
+        background: #ddd;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Content</h1>
+      <button id="open" type="button">Open panel</button>
+      <div id="panel"><div>Panel text</div></div>
+      <p class="card" id="card">Below the panel. It is pushed down while the panel opens.</p>
+      <button id="jump" type="button">Jump</button>
+    </main>
+    <script>
+      document.getElementById('open').addEventListener('click', () => {
+        document.getElementById('panel').style.height = '120px';
+      });
+      document.getElementById('jump').addEventListener('click', () => {
+        // No transition: the block is in another place at once
+        document.getElementById('card').style.marginTop = '60px';
+      });
+    </script>
+  </body>
+</html>

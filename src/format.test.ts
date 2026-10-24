@@ -11,6 +11,7 @@ const moved = (overrides: Partial<Shift> = {}): Shift => ({
   after: { top: 70, left: 16, width: 300, height: 40 },
   affected: 0,
   at: 180,
+  url: '/docs',
   ...overrides,
 });
 
@@ -44,6 +45,7 @@ describe('describeShift', () => {
       after: { top: 0, left: 0, width: 0, height: 2300 },
       affected: 0,
       at: 400,
+      url: '/docs',
     });
     expect(text).toBe('the page became 1500 px higher (800 to 2300 px) after 400 ms');
   });
