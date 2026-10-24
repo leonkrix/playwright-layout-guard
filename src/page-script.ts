@@ -75,6 +75,9 @@ export function guardInPage(options: PageOptions): void {
   // sticky or inline later (a class that is set on scroll), and reading every style on every frame is
   // too slow on a long page
   const STYLE_LIFETIME = 500;
+  // How long after the last running animation of a layout property shifts are still let go (the
+  // last frame of the animation, and what it pushed, settles)
+  const ANIMATION_TAIL = 100;
   // Milliseconds to wait for the resize event after the size of the window has changed
   const RESIZE_WAIT = 250;
   // Milliseconds after the load during which a resize is part of the page settling
@@ -183,11 +186,37 @@ export function guardInPage(options: PageOptions): void {
     report?.({ ...shift, at: Math.round(performance.now()) });
   };
 
+  // A transition or animation that changes the layout of something (the height of a panel) and ends
+  // is meant: the page moves on purpose while it runs. One that never ends (a carousel) is not let go
+  const LAYOUT_PROPERTY =
+    /^(top|left|right|bottom|inset|width|height|minWidth|maxWidth|minHeight|maxHeight|margin|padding|border(Top|Right|Bottom|Left)?Width|fontSize|lineHeight|letterSpacing|gap|rowGap|columnGap|flex|grid|aspectRatio)/;
+  const camelCase = (name: string): string =>
+    name.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
+  const changesLayout = (animation: Animation): boolean => {
+    const effect = animation.effect;
+    if (!(effect instanceof KeyframeEffect) || effect.getComputedTiming().iterations === Infinity) {
+      return false;
+    }
+    if (typeof CSSTransition !== 'undefined' && animation instanceof CSSTransition) {
+      return LAYOUT_PROPERTY.test(camelCase(animation.transitionProperty));
+    }
+    return effect
+      .getKeyframes()
+      .some((keyframe) =>
+        Object.keys(keyframe).some((name) => LAYOUT_PROPERTY.test(camelCase(name))),
+      );
+  };
+  const animatesLayout = (): boolean =>
+    document
+      .getAnimations()
+      .some((animation) => animation.playState === 'running' && changesLayout(animation));
+
   const ignored = (element: Element): boolean =>
     options.ignore.length > 0 &&
     options.ignore.some((selector) => closestAcross(element, selector) !== null);
 
   let lastScan = 0;
+  let animatingUntil = 0;
   let lastSize = '';
   // When the size of the window changed, the guard waits a moment for the resize event before it
   // reports anything: what it finds meanwhile is kept, and thrown away if the event comes
@@ -216,6 +245,9 @@ export function guardInPage(options: PageOptions): void {
       for (const entry of kept) {
         send(entry.key, entry.shift);
       }
+    }
+    if (options.animations === 'allow' && animatesLayout()) {
+      animatingUntil = performance.now() + ANIMATION_TAIL;
     }
     // How far the page was scrolled since the last look: a part that moves exactly as far is stuck to
     // the window (a header that sticks, a table of contents that follows), which is not a layout change
@@ -271,8 +303,13 @@ export function guardInPage(options: PageOptions): void {
           continue;
         }
         const before = baselines.get(element);
-        baselines.set(element, now);
-        if (before === undefined || !armed || performance.now() < quietUntil) {
+        if (
+          before === undefined ||
+          !armed ||
+          performance.now() < quietUntil ||
+          performance.now() < animatingUntil
+        ) {
+          baselines.set(element, now);
           continue;
         }
         // Moved: its top changed, or both its left and its right edge changed. A box that only grows
@@ -285,52 +322,56 @@ export function guardInPage(options: PageOptions): void {
           Math.abs(top - oldTop) > tolerance ||
           (Math.abs(left - oldLeft) > tolerance &&
             Math.abs(left + width - (oldLeft + oldWidth)) > tolerance);
-        if (moved) {
-          // When the box around it moved by the same amount, this is only a consequence: what is
-          // reported is the box that moved first, with the number of elements that went with it
-          let holder = parentOf(element);
-          while (holder !== null && !moves.has(holder)) {
-            holder = parentOf(holder);
-          }
-          const outer = holder === null ? undefined : moves.get(holder);
-          const deltaTop = top - oldTop;
-          const deltaLeft = left - oldLeft;
-          if (
-            scrolled !== 0 &&
-            Math.abs(deltaTop - scrolled) <= tolerance &&
-            Math.abs(deltaLeft) <= tolerance
-          ) {
-            continue;
-          }
-          if (
-            outer !== undefined &&
-            Math.abs(outer.deltaTop - deltaTop) <= tolerance &&
-            Math.abs(outer.deltaLeft - deltaLeft) <= tolerance
-          ) {
-            moves.set(element, {
-              deltaTop,
-              deltaLeft,
-              root: outer.root,
-              affected: 0,
-            });
-            outer.root.affected += 1;
-            continue;
-          }
-          const move: Move = {
+        if (!moved) {
+          // The old place stays the reference. A part that drifts by less than the tolerance in every
+          // frame (a slow animation of its position) is found when it has drifted far enough
+          continue;
+        }
+        baselines.set(element, now);
+        // When the box around it moved by the same amount, this is only a consequence: what is
+        // reported is the box that moved first, with the number of elements that went with it
+        let holder = parentOf(element);
+        while (holder !== null && !moves.has(holder)) {
+          holder = parentOf(holder);
+        }
+        const outer = holder === null ? undefined : moves.get(holder);
+        const deltaTop = top - oldTop;
+        const deltaLeft = left - oldLeft;
+        if (
+          scrolled !== 0 &&
+          Math.abs(deltaTop - scrolled) <= tolerance &&
+          Math.abs(deltaLeft) <= tolerance
+        ) {
+          continue;
+        }
+        if (
+          outer !== undefined &&
+          Math.abs(outer.deltaTop - deltaTop) <= tolerance &&
+          Math.abs(outer.deltaLeft - deltaLeft) <= tolerance
+        ) {
+          moves.set(element, {
             deltaTop,
             deltaLeft,
-            root: undefined as unknown as Move,
+            root: outer.root,
             affected: 0,
-          };
-          move.root = move;
-          moves.set(element, move);
-          roots.push({
-            element,
-            move,
-            before: [oldTop, oldLeft, oldWidth, oldHeight],
-            now,
           });
+          outer.root.affected += 1;
+          continue;
         }
+        const move: Move = {
+          deltaTop,
+          deltaLeft,
+          root: undefined as unknown as Move,
+          affected: 0,
+        };
+        move.root = move;
+        moves.set(element, move);
+        roots.push({
+          element,
+          move,
+          before: [oldTop, oldLeft, oldWidth, oldHeight],
+          now,
+        });
       }
       for (const { element, move, before, now } of roots) {
         send(`${describe(element)}:${before.join(',')}:${now.join(',')}`, {
@@ -354,6 +395,7 @@ export function guardInPage(options: PageOptions): void {
       !paused &&
       armed &&
       loaded &&
+      performance.now() >= animatingUntil &&
       pageHeight !== undefined &&
       (options.pageHeight === 'any'
         ? Math.abs(height - pageHeight) > options.tolerance

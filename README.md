@@ -91,17 +91,76 @@ test.use({ layoutGuard: false }); // off for this file, say why in a comment
 
 All optional. Set them with `test.use({ layoutGuard: { ... } })`, or pass them to `installLayoutGuard(page, options)`.
 
-| Option                    | Default               | What it does                                                                                                              |
-| ------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `ignore`                  | `[]`                  | CSS selectors of elements (and everything inside) to leave alone.                                                         |
-| `fluidAttribute`          | `'data-layout-fluid'` | Attribute that marks a box whose inside may rearrange.                                                                    |
-| `tolerance`               | `1`                   | Pixels an element may be off before it counts as moved.                                                                   |
-| `quietMs`                 | `600`                 | How long to wait after a resize, an opened `<details>` or a `pushState` before looking again.                             |
-| `scope`                   | `'body'`              | CSS selector of the part of the page to watch.                                                                            |
-| `start`                   | `'load'`              | `'load'` reports from the load event on. `'immediate'` also reports what moves while the page loads (noisier, see below). |
-| `ignoreInsideInteractive` | `true`                | Leave out what is inside a link or a button.                                                                              |
-| `pageHeight`              | `'growth'`            | `'growth'`: the page became higher than the window. `'any'`: also a page that became lower.                               |
-| `maxReports`              | `50`                  | The most shifts reported in one test.                                                                                     |
+| Option                    | Default               | What it does                                                                                                                                                                                    |
+| ------------------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ignore`                  | `[]`                  | CSS selectors of elements (and everything inside) to leave alone.                                                                                                                               |
+| `fluidAttribute`          | `'data-layout-fluid'` | Attribute that marks a box whose inside may rearrange.                                                                                                                                          |
+| `tolerance`               | `1`                   | Pixels an element may be off before it counts as moved.                                                                                                                                         |
+| `quietMs`                 | `600`                 | How long to wait after a resize, an opened `<details>` or a `pushState` before looking again.                                                                                                   |
+| `scope`                   | `'body'`              | CSS selector of the part of the page to watch.                                                                                                                                                  |
+| `start`                   | `'load'`              | `'load'` reports from the load event on. `'immediate'` also reports what moves while the page loads (noisier, see below).                                                                       |
+| `ignoreInsideInteractive` | `true`                | Leave out what is inside a link or a button.                                                                                                                                                    |
+| `pageHeight`              | `'growth'`            | `'growth'`: the page became higher than the window. `'any'`: also a page that became lower.                                                                                                     |
+| `animations`              | `'report'`            | `'allow'`: while a CSS transition or animation of a layout property runs and ends (a panel that slides open), nothing is reported. See [Animations that are meant](#animations-that-are-meant). |
+| `baseline`                | none                  | Path of a JSON file with known shifts: they do not fail the test, a new one does. See [Adopting it in a project that moves today](#adopting-it-in-a-project-that-moves-today).                  |
+| `screenshot`              | `true`                | Attach a picture with the moved boxes marked to a failed test. See [See what moved](#see-what-moved).                                                                                           |
+| `maxReports`              | `50`                  | The most shifts reported in one test.                                                                                                                                                           |
+
+### Set the options for the whole project
+
+Options that should apply to every test go into `playwright.config.ts`, typed with `LayoutGuardTestOptions`:
+
+```ts
+import { defineConfig } from '@playwright/test';
+import type { LayoutGuardTestOptions } from 'playwright-layout-guard';
+
+export default defineConfig<LayoutGuardTestOptions>({
+  use: {
+    layoutGuard: { pageHeight: 'any', ignore: ['.ad-slot'] },
+  },
+});
+```
+
+A single file or group still has the last word with `test.use({ layoutGuard: ... })`.
+
+### See what moved
+
+A failed test gets a picture attached to the Playwright report (`layout-shifts.png`): the old place of every moved box is dashed and grey, the new one is amber and carries the number of its line in the message. A page that became higher gets a line at the old and one at the new end. The picture shows the moved boxes and some of the page around them, not the whole page.
+
+![A page whose banner arrived late: the box that was pushed down is outlined in amber with the number 1, its old place is dashed](docs/images/example-report.png)
+
+Switch it off with `screenshot: false`, or take it yourself with `await guard.screenshot()` (a PNG `Buffer`, or `undefined` when there is nothing to show). Shifts inside an iframe are in the message but not in the picture, because their places are relative to the frame.
+
+### Animations that are meant
+
+An accordion that slides open with `transition: height 300ms` moves what is below it while it runs. That is a layout change, so by default it is a shift. If it is meant, allow it:
+
+```ts
+test.use({ layoutGuard: { animations: 'allow' } });
+```
+
+While a CSS transition or animation of a layout property (`height`, `width`, `top`, `left`, `margin`, `padding`, `gap`, `font-size` and so on) is running, and for 100 ms after it ends, nothing is reported. What is **not** let go: an animation that never ends (a carousel that slides for ever is a page that never stands still), anything that is not animated (a block that jumps right after the panel opened is reported), and `transform` or `opacity`, which are not shifts anyway. It works for CSS transitions and CSS animations (the Web Animations API of the browser); a script that moves things frame by frame with `requestAnimationFrame` is not recognised, use `data-layout-fluid` or `ignore` for that.
+
+The price: while such an animation runs, a real shift somewhere else on the page is let go as well, which is why it is off by default.
+
+### Adopting it in a project that moves today
+
+A project that has shifts already cannot switch the guard on without a red test run. Record what is there, and fail only on what is new:
+
+```ts
+// playwright.config.ts
+export default defineConfig<LayoutGuardTestOptions>({
+  use: { layoutGuard: { baseline: 'tests/layout-baseline.json' } },
+});
+```
+
+```bash
+LAYOUT_GUARD_UPDATE=1 npx playwright test --workers=1   # writes the file, nothing fails
+git add tests/layout-baseline.json                     # commit it, it is the list of debts
+npx playwright test                                    # from now on only new shifts fail
+```
+
+An entry is the kind of shift, the address of the page and the element (`main > div.banner`), not how far it moved, so a known shift that gets worse is still known. Fix a shift, delete its line, and the guard holds the line for good. The message of a failing test says how many known shifts it left out, and `layout-shifts.json` marks each shift as `known`. The file is sorted and locked while it is written, so the update also works with several workers; `--workers=1` is only simpler to follow.
 
 ### Without the fixture
 
@@ -111,6 +170,8 @@ import { installLayoutGuard } from 'playwright-layout-guard';
 const guard = await installLayoutGuard(page); // before page.goto()
 await page.goto('/');
 // guard.shifts       what was found, as data
+// guard.unknownShifts what is not in the baseline (all of it without a baseline)
+// guard.screenshot()  a PNG with the moved boxes marked
 // guard.assertStable() throws an error that names every shift
 // guard.forget()     start over from the current layout (after a client-side app rendered)
 // guard.pause() / guard.resume()
@@ -135,14 +196,13 @@ The package was tried on 23 public pages (documentation sites, news sites, frame
 
 Not promises, and in no particular order. If one of them would help you, [open an issue](https://github.com/leonkrix/playwright-layout-guard/issues) and say what you test.
 
-- **Recognise motion that is meant:** an element whose layout is animated on purpose by a CSS transition or animation (an accordion that slides open) is reported today; an opt-in could leave it out while the animation runs.
 - **Leave out a single frame** (`ignoreFrames`), for embedded widgets you do not control.
 - **Arm on a condition** (`armWhen: 'main'`) instead of calling `guard.forget()`, for client-side rendered apps.
-- **A visual report:** a screenshot with the moved boxes marked, attached to the Playwright report.
-- **A baseline file** for existing projects: record today's known shifts, fail only on new ones.
 - **A viewport-only mode**, to count only what a visitor could see, like CLS does.
 - **A command line tool** to point the guard at a URL (`npx`), which is what the survey script does by hand.
 - **Other test runners** (Puppeteer, Cypress, WebdriverIO): the part that runs in the page does not depend on Playwright.
+
+More recipes (cookie banners, carousels, client-side apps, several pages in one test) are in [docs/recipes.md](docs/recipes.md).
 
 ## Status and versioning
 

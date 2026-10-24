@@ -20,6 +20,8 @@ export interface Shift {
   affected: number;
   /** Milliseconds since the page started */
   at: number;
+  /** The address of the page (or frame) it was found on, without the query: `/docs/intro` */
+  url: string;
 }
 
 /** What you can set. Everything is optional; the defaults are what the guard was made with. */
@@ -61,8 +63,33 @@ export interface LayoutGuardOptions {
    * became lower, for a page that must not change its height at all.
    */
   pageHeight?: 'growth' | 'any';
+  /**
+   * What to do with an element whose layout is animated on purpose (a panel that slides open with a
+   * CSS transition of its height). `report` (the default): it is a shift like any other. `allow`: while
+   * a finite CSS transition or animation of a layout property runs (and for a moment after it),
+   * nothing is reported. Animations that never end are not allowed this way, and what moves with
+   * `transform` or `opacity` is not a shift anyway.
+   */
+  animations?: 'report' | 'allow';
+  /**
+   * The path of a JSON file with the shifts that are known and accepted (for a project that adopts
+   * the guard while it still has some). A shift that is in the file does not fail the test, a new one
+   * does. Write the file with `LAYOUT_GUARD_UPDATE=1 npx playwright test --workers=1`.
+   */
+  baseline?: string;
+  /**
+   * Attach a picture with the moved boxes marked (the old place dashed, the new one in amber, with
+   * the number of the report line) to a failed test. Default `true`.
+   */
+  screenshot?: boolean;
   /** The most shifts that are reported in one test. Default 50. */
   maxReports?: number;
+}
+
+/** The option of the fixture, to type `use` in `playwright.config.ts` (`defineConfig<LayoutGuardTestOptions>`). */
+export interface LayoutGuardTestOptions {
+  /** `false` switches the guard off; an object sets its options. */
+  layoutGuard: boolean | LayoutGuardOptions;
 }
 
 /** What the part that runs in the page gets (everything is filled in). */
@@ -76,5 +103,6 @@ export interface PageOptions {
   start: 'load' | 'immediate';
   ignoreInsideInteractive: boolean;
   pageHeight: 'growth' | 'any';
+  animations: 'report' | 'allow';
   maxReports: number;
 }
