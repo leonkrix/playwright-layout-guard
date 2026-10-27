@@ -2,6 +2,17 @@
 
 Thank you for looking at this. Bug reports, false positives and ideas are as welcome as code.
 
+## How a change gets in
+
+1. **Issue first, for anything bigger than a small fix.** A bug with a reproduction, an idea for an option or a rule: open an [issue](https://github.com/leonkrix/playwright-layout-guard/issues) and say what you test. It saves you from writing code that does not fit.
+2. **Small fixes and documentation: straight to a pull request.** A typo, a wrong sentence in the README, a clear bug with a test.
+3. **Fork, branch, pull request.** Fork the repository, make a branch, and open a pull request against `main`. You do not need write access, and nobody has to add you.
+4. **The CI runs.** The first time you contribute, a maintainer has to approve the run (GitHub asks for that for every new contributor, because workflows run code). The check `CI passed` has to be green.
+5. **The maintainer reviews and merges.** Only a maintainer can merge. Pull requests are squash-merged, so the title of the pull request becomes the commit message: write it as a Conventional Commit.
+6. **The change is released** with the next version. A pull request that users can see carries a changeset (see below); the maintainer collects them into a release.
+
+Nobody merges their own pull request without the CI. While there is one maintainer, the maintainer's own pull requests need no second approval; that changes as soon as there is a second maintainer.
+
 ## Reporting a false positive
 
 The most useful report is a page where the guard fails a test but nothing visibly jumps (or the other way round). Please include:

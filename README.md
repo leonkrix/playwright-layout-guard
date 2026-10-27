@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/leonkrix/playwright-layout-guard/badge)](https://scorecard.dev/viewer/?uri=github.com/leonkrix/playwright-layout-guard)
 
-**A Playwright fixture that fails a test when something on the page moves.** Any element that changes its place or size after the page has loaded — a banner that pushes the content down, an image without a size, a button that jumps when it is pressed — fails the test, and the message names the element and says how far it moved. It works in Chromium, Firefox and WebKit.
+**A Playwright fixture that fails a test when something on the page moves.** Any element that changes its place or size after the page has loaded (a banner that pushes the content down, an image without a size, a button that jumps when it is pressed) fails the test, and the message names the element and says how far it moved. It works in Chromium, Firefox and WebKit.
 
 ```text
 Error: Something on the page moved or changed its size (1 shift):
