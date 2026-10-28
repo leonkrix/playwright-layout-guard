@@ -19,11 +19,30 @@ export function guardInPage(options: PageOptions): void {
     pause: () => void;
     resume: () => void;
     forget: () => void;
+    isArmed: () => boolean;
   }
 
   const globalScope = window as unknown as Record<string, unknown>;
   // Installing the guard twice (an init script that runs again) must not double the work
   if (globalScope[`${options.report}:controller`] !== undefined) {
+    return;
+  }
+  // A frame that the options leave out gets no guard at all (not even a controller). The address is
+  // looked at again when a frame gets a new document, because Firefox first runs this script in the
+  // empty page of an iframe. Text that the address contains; a star stands for any characters
+  const isLeftOut = (): boolean => {
+    if (window === window.top || options.ignoreFrames.length === 0) {
+      return false;
+    }
+    const address = `${location.origin}${location.pathname}`;
+    return options.ignoreFrames.some((entry) =>
+      new RegExp(
+        entry.replace(/[.+?^${}()|[\]\\]/g, (character) => `\\${character}`).replace(/\*/g, '.*'),
+      ).test(address),
+    );
+  };
+  let leftOut = isLeftOut();
+  if (leftOut) {
     return;
   }
 
@@ -38,7 +57,21 @@ export function guardInPage(options: PageOptions): void {
   let scrollTop = window.scrollY;
   // The guard looks from the first frame, so that it knows where everything was before it moves, but
   // it only reports once it is armed: at the load event (or at once with start: immediate)
-  let armed = options.start === 'immediate';
+  // armWhen is for the page itself: a frame has no app to wait for
+  const gate = options.armWhen !== undefined && window === window.top ? options.armWhen : undefined;
+  const startsArmed = (): boolean => options.start === 'immediate' && gate === undefined;
+  let armed = startsArmed();
+  // The load event and the settling time after it have passed (a gate waits for them as well)
+  let settled = options.start === 'immediate';
+  const gateOpen = (): boolean => {
+    try {
+      const target = gate === undefined ? null : document.querySelector(gate);
+      return target?.checkVisibility({ visibilityProperty: true }) ?? false;
+    } catch {
+      // A selector the browser refuses never matches, and the test says that nothing was watched
+      return false;
+    }
+  };
   // The height of the page is only compared after the load event: while a page is still arriving, it
   // gets longer all the time and nothing that is already shown moves because of that
   let loaded = false;
@@ -224,6 +257,9 @@ export function guardInPage(options: PageOptions): void {
   let held: { key: string; shift: Record<string, unknown> }[] = [];
   const scan = (): void => {
     lastScan = performance.now();
+    if (leftOut) {
+      return;
+    }
     // A document that is being written again (document.open) or replaced has no root for a moment
     if ((document.documentElement as HTMLElement | null) === null) {
       return;
@@ -413,6 +449,11 @@ export function guardInPage(options: PageOptions): void {
       });
     }
     pageHeight = height;
+    // The page is drawn: what it looks like now is the baseline, after a quiet moment for the rest of it
+    if (!armed && gate !== undefined && settled && gateOpen()) {
+      quietUntil = performance.now() + options.quietMs;
+      armed = true;
+    }
   };
 
   // Each document gets its own loop: when the document is replaced, the old loop stops
@@ -447,6 +488,7 @@ export function guardInPage(options: PageOptions): void {
       forget();
     },
     forget,
+    isArmed: () => armed,
   };
   globalScope[`${options.report}:controller`] = controller;
 
@@ -483,7 +525,10 @@ export function guardInPage(options: PageOptions): void {
     // that a slow machine, which draws its next frame late, cannot swallow a shift that comes after
     window.setTimeout(() => {
       scan();
-      armed = true;
+      settled = true;
+      if (gate === undefined) {
+        armed = true;
+      }
       loaded = true;
       loadedAt = performance.now();
     }, SETTLE_AFTER_LOAD);
@@ -533,7 +578,14 @@ export function guardInPage(options: PageOptions): void {
     }
     if (document !== watched) {
       watched = document;
-      armed = options.start === 'immediate';
+      leftOut = isLeftOut();
+      if (leftOut) {
+        // The old loop stops, and nothing new is started for this document
+        generation += 1;
+        return;
+      }
+      armed = startsArmed();
+      settled = options.start === 'immediate';
       loaded = false;
       baselines = new WeakMap();
       pageHeight = undefined;

@@ -15,6 +15,7 @@ const off: LayoutGuard = {
   unknownShifts: [],
   allowShifts: (action) => action(),
   forget: () => Promise.resolve(),
+  armed: () => Promise.resolve(true),
   pause: () => Promise.resolve(),
   resume: () => Promise.resolve(),
   assertStable: () => undefined,
@@ -40,6 +41,12 @@ export const test = base.extend<LayoutGuardFixtures>({
       const options: LayoutGuardOptions = layoutGuard === true ? {} : layoutGuard;
       const guard = await installLayoutGuard(context, options);
       await use(guard);
+      // A selector that never matched means that nothing was watched: a green test would be a lie
+      if (options.armWhen !== undefined && testInfo.errors.length === 0 && !(await guard.armed())) {
+        throw new Error(
+          `layout-guard: armWhen "${options.armWhen}" never matched a shown element on a page of this test, so nothing was watched there. Check the selector.`,
+        );
+      }
       if (guard.shifts.length === 0) {
         return;
       }

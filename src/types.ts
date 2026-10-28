@@ -84,6 +84,22 @@ export interface LayoutGuardOptions {
   screenshot?: boolean;
   /** The most shifts that are reported in one test. Default 50. */
   maxReports?: number;
+  /**
+   * Frames (iframes) that the guard leaves alone, for widgets you do not control. Each entry is text
+   * that the address of the frame (origin and path, without the query) contains; `*` stands for any
+   * characters, so `'widget.example'` or `'https://widget.example/embed'` work. A frame inside a frame is
+   * matched by its own address. The box of the iframe in the page is still watched, use `ignore` to
+   * leave that out too.
+   */
+  ignoreFrames?: string[];
+  /**
+   * A CSS selector of something that is on the page and shown when the page is ready, for a page that
+   * is drawn by a script after the load event (a client-side app): the guard reports nothing until
+   * the selector matches, takes the layout then, and reports from there on. It comes on top of
+   * `start`. It is looked for in the page itself, frames start as usual. A test fails when the
+   * selector never matched on a page, because then nothing was watched.
+   */
+  armWhen?: string;
 }
 
 /** The option of the fixture, to type `use` in `playwright.config.ts` (`defineConfig<LayoutGuardTestOptions>`). */
@@ -105,4 +121,6 @@ export interface PageOptions {
   pageHeight: 'growth' | 'any';
   animations: 'report' | 'allow';
   maxReports: number;
+  ignoreFrames: string[];
+  armWhen: string | undefined;
 }

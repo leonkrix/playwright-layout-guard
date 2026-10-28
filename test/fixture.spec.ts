@@ -54,3 +54,24 @@ test('allows shifts for an action, and shows what it found', async ({ page, guar
   await page.waitForTimeout(800);
   expect(guard.shifts).toEqual([]);
 });
+
+test.describe('with armWhen that never matches', () => {
+  test.fail();
+  test.use({ layoutGuard: { armWhen: '#never-drawn' } });
+
+  test('fails the test, because nothing was watched', async ({ page }) => {
+    await page.goto('/app-after-load.html');
+    await page.waitForTimeout(600);
+    await expect(page.locator('h1')).toBeVisible();
+  });
+});
+
+test.describe('with armWhen that matches', () => {
+  test.use({ layoutGuard: { armWhen: '#app' } });
+
+  test('passes on an app that draws itself after the load', async ({ page }) => {
+    await page.goto('/app-after-load.html');
+    await expect(page.locator('#app')).toBeVisible();
+    await page.waitForTimeout(1000);
+  });
+});
