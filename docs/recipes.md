@@ -63,6 +63,14 @@ test.use({ layoutGuard: { ignore: ['.ad-slot', '.live-ticker', '[data-carousel]'
 
 The selectors are CSS selectors; the element and everything inside it is left alone. Keep the list short and say why in a comment: every entry is a place where the guard is blind.
 
+An embedded widget in an iframe has a page of its own that the guard watches too. Leave it out by its address with `ignoreFrames`:
+
+```ts
+test.use({ layoutGuard: { ignoreFrames: ['widget.example'] } });
+```
+
+The iframe box in your page is still watched (it can push your content), the page inside it is not.
+
 ## An app that renders after the load
 
 A client-side rendered app is an empty page at the load event and fills in afterwards, which looks like a page that moves. Wait until the app has rendered, then tell the guard to start from there:
@@ -75,6 +83,14 @@ test('the dashboard', async ({ page, guard }) => {
   // Now everything that moves is a shift
 });
 ```
+
+Or let the guard wait for the app by itself: name something that is shown when it is ready.
+
+```ts
+test.use({ layoutGuard: { armWhen: '#app' } });
+```
+
+The guard reports nothing until the element is shown, takes the layout then, and reports from there on. If the element never shows (a wrong selector, an app that failed to start), the test fails and says so, because nothing was watched.
 
 Server-rendered pages need none of this. A framework that renders on the server and then **hydrates** is what the guard is best at: the page must look the same before and after.
 

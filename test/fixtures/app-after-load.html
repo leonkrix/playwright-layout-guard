@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>An app that draws itself after the load event</title>
+    <link rel="stylesheet" href="/base.css" />
+  </head>
+  <body>
+    <main>
+      <div id="root"></div>
+      <p class="card" id="footer">The footer is in the page from the start.</p>
+    </main>
+    <script>
+      // The app draws its header after the load event: the footer is pushed down by it. Later it
+      // can show a banner, which the test asks for
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          document.getElementById('root').innerHTML =
+            '<div id="app"><h1>The app</h1><div class="banner"></div></div>';
+        }, 250);
+      });
+      window.showLateBanner = () => {
+        const banner = document.createElement('div');
+        banner.className = 'banner';
+        document.getElementById('root').appendChild(banner);
+      };
+    </script>
+  </body>
+</html>

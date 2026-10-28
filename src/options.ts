@@ -11,6 +11,8 @@ export const DEFAULTS = {
   pageHeight: 'growth' as 'growth' | 'any',
   animations: 'report' as 'report' | 'allow',
   maxReports: 50,
+  ignoreFrames: [] as string[],
+  armWhen: undefined as string | undefined,
 };
 
 /** The options that are used on the side of the test and not sent to the page. */
@@ -59,7 +61,24 @@ export function resolveOptions(options: LayoutGuardOptions = {}, report: string)
       `layout-guard: fluidAttribute must be the name of an attribute, not "${merged.fluidAttribute}"`,
     );
   }
-  return { ...merged, ignore: [...merged.ignore], report };
+  if (
+    !Array.isArray(merged.ignoreFrames) ||
+    merged.ignoreFrames.some((entry) => typeof entry !== 'string' || entry === '')
+  ) {
+    throw new TypeError('layout-guard: ignoreFrames must be a list of texts, none of them empty');
+  }
+  if (
+    merged.armWhen !== undefined &&
+    (typeof merged.armWhen !== 'string' || merged.armWhen.trim() === '')
+  ) {
+    throw new TypeError('layout-guard: armWhen must be a CSS selector');
+  }
+  return {
+    ...merged,
+    ignore: [...merged.ignore],
+    ignoreFrames: [...merged.ignoreFrames],
+    report,
+  };
 }
 
 function definedOnly<T extends object>(value: T): Partial<T> {

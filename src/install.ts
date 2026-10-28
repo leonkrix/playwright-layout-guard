@@ -23,6 +23,11 @@ export interface LayoutGuard {
   pause: () => Promise<void>;
   /** Looks again, from the current layout */
   resume: () => Promise<void>;
+  /**
+   * Whether the guard is watching on every page that was opened. Only `armWhen` can keep it from
+   * doing that for long: until the selector matches it is `false`.
+   */
+  armed: () => Promise<boolean>;
   /** Throws an error that names every shift that is not in the baseline, when there is one */
   assertStable: () => void;
   /**
@@ -155,6 +160,26 @@ export async function installLayoutGuard(
       }
     },
     forget: () => tell('forget'),
+    armed: async () => {
+      const states = await Promise.all(
+        pages().map(async (page) => {
+          // A page that is closed or was never opened has nothing to watch
+          if (page.isClosed() || !/^(https?|file):/.test(page.url())) {
+            return true;
+          }
+          return page
+            .evaluate((name) => {
+              const controllers = window as unknown as Record<
+                string,
+                { isArmed?: () => boolean } | undefined
+              >;
+              return controllers[`${name}:controller`]?.isArmed?.() ?? false;
+            }, report)
+            .catch(() => true);
+        }),
+      );
+      return states.every(Boolean);
+    },
     pause: () => tell('pause'),
     resume: () => tell('resume'),
     assertStable: () => {

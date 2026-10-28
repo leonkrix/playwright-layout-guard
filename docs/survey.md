@@ -18,7 +18,7 @@ What this says:
 - **`immediate` finds most of what CLS finds** (8 of 9), but 30 of 46 loads report something and 16 hit the limit: a page that is still being delivered in pieces does move, and the guard says so. Use it for your own pages when the load itself is the thing to check, not as a default.
 - **The default mode is quiet on most real pages** (38 of 46 loads without a report). What it reports was checked by hand:
   - **Real layout changes after the load:** web.dev (a footer pushed 78 px down), nodejs.org (the navigation settles 4 px at a time), bbc.com (a few pixels when a script finishes) and the Vue guide (the whole app moves 72 px up when a bar above it goes away). Some pages show up in one run and not in the next (MDN on a phone: a sidebar appears at 1 s and pushes the whole article 392 px down, with a CLS of 0 because the article was below the window), because what a page does after the load depends on timing.
-  - **Small frames:** react.dev embeds frames that are 15 px high and grow to 20 px. They are reported with the name of the frame (`[frame /path]`). There is no option yet to leave out a single frame (listed as an idea in the README).
+  - **Small frames:** react.dev embeds frames that are 15 px high and grow to 20 px. They are reported with the name of the frame (`[frame /path]`). Since 0.4 a frame can be left out with `ignoreFrames`.
 
 ## Pages with a report or a poor CLS
 
