@@ -398,7 +398,8 @@ export function renderText(results: readonly PageResult[]): string {
   return `${lines.join('\n')}\n`;
 }
 
-const cell = (text: string): string => text.replace(/\|/g, '\\|').replace(/\n/g, ' ');
+const cell = (text: string): string =>
+  text.replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
 
 /** A table for the summary of a GitHub Actions run, or any Markdown viewer. */
 export function renderMarkdown(results: readonly PageResult[]): string {
